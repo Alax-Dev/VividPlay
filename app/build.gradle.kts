@@ -28,11 +28,15 @@ android {
         }
     }
 
-    signingConfigs {
-        create("debugKey") {
-            // Uses default debug keystore generated during build.
-        }
-    }
+ signingConfigs {
+ create("debugKey") {
+  // Uses default debug keystore generated during build.
+  storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
+  storePassword = "android"
+  keyAlias = "androiddebugkey"
+  keyPassword = "android"
+ }
+}
 
     buildTypes {
         release {

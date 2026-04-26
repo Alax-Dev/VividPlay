@@ -168,9 +168,9 @@ fun PlayerScreen(
                 if (locked && event !is PlayerGestureEvent.ToggleControls) return@playerGestures
                 when (event) {
                     PlayerGestureEvent.ToggleControls -> controlsVisible = !controlsVisible
-                    PlayerGestureEvent.TogglePlay -> {
-                        if (player.isPlaying) player.pause() else player.play()
-                    }
+        PlayerGestureEvent.TogglePlay -> {
+          if (player.playWhenReady) player.pause() else player.play()
+        }
                     is PlayerGestureEvent.QuickJump -> {
                         val step = if (event.forward) 10_000 else -10_000
                         player.seekTo((player.currentPosition + step).coerceAtLeast(0))
@@ -275,7 +275,7 @@ fun PlayerScreen(
                 durationMs = duration,
                 isPlaying = isPlaying,
                 onSeek = { player.seekTo(it); position = it },
-                onPlayPause = { if (player.isPlaying) player.pause() else player.play() },
+                onPlayPause = { if (player.playWhenReady) player.pause() else player.play() },
                 onBack10 = { player.seekTo((player.currentPosition - 10_000).coerceAtLeast(0)) },
                 onFwd10 = { player.seekTo(player.currentPosition + 10_000) },
             )

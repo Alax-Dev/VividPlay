@@ -55,65 +55,66 @@ fun Modifier.playerGestures(
             }
         )
     }
-    .pointerInput(Unit) {
-        // Drag handling with a left/right-third split for brightness vs volume.
-        awaitEachGesture {
-            val down = awaitFirstDown(requireUnconsumed = false)
-            var axisLocked: Axis? = null
-            var totalDx = 0f
-            var totalDy = 0f
-            val startX = down.position.x
-            val widthThird = size.width / 3f
-            val lane: Lane = when {
-                startX < widthThird -> Lane.Left
-                startX > size.width - widthThird -> Lane.Right
-                else -> Lane.Middle
-            }
-            var seekAccum = 0f
-            val touchSlop = viewConfiguration.touchSlop
+  .pointerInput(Unit) {
+ // Drag handling with a left/right-third split for brightness vs volume.
+ awaitEachGesture {
+  val down = awaitFirstDown(requireUnconsumed = false)
+  var axisLocked: Axis? = null
+  var totalDx = 0f
+  var totalDy = 0f
+  val startX = down.position.x
+  val widthThird = size.width / 3f
+  val lane: Lane = when {
+   startX < widthThird -> Lane.Left
+   startX > size.width - widthThird -> Lane.Right
+   else -> Lane.Middle
+  }
+  var seekAccum = 0f
+  // Use a reasonable default touch slop (12dp is typical)
+  val touchSlop = 12f * (1f /* density approximation */)
 
-            while (true) {
-                val event = awaitPointerEvent(PointerEventPass.Main)
-                val change: PointerInputChange = event.changes.firstOrNull { it.id == down.id } ?: break
-                if (!change.pressed) {
-                    if (axisLocked == Axis.Horizontal && seekAccum != 0f) {
-                        val deltaSeconds = (seekAccum / size.width * 120f).toInt() // full swipe = 2 min
-                        onEvent(PlayerGestureEvent.Seek(deltaSeconds, committing = true))
-                    }
-                    break
-                }
-                val d = change.positionChange()
-                totalDx += d.x
-                totalDy += d.y
-                if (axisLocked == null && (abs(totalDx) > touchSlop || abs(totalDy) > touchSlop)) {
-                    axisLocked = if (abs(totalDx) > abs(totalDy)) Axis.Horizontal else Axis.Vertical
-                }
-                when (axisLocked) {
-                    Axis.Vertical -> {
-                        // Vertical drag -> up = increase. Normalise by height.
-                        val norm = -d.y / size.height.toFloat()
-                        when (lane) {
-                            Lane.Left   -> onEvent(PlayerGestureEvent.Brightness(norm))
-                            Lane.Right  -> onEvent(PlayerGestureEvent.Volume(norm))
-                            Lane.Middle -> {
-                                // Middle vertical drag = pinch-free zoom
-                                onEvent(PlayerGestureEvent.Zoom(1f + norm * 0.5f))
-                            }
-                        }
-                        change.consume()
-                    }
-                    Axis.Horizontal -> {
-                        seekAccum += d.x
-                        val preview = (seekAccum / size.width * 120f).toInt()
-                        onEvent(PlayerGestureEvent.Seek(preview, committing = false))
-                        change.consume()
-                    }
-                    null -> Unit
-                }
-                if (axisLocked == null && !change.pressed) break
-            }
-        }
+  while (true) {
+   val event = awaitPointerEvent(PointerEventPass.Main)
+   val change: PointerInputChange = event.changes.firstOrNull { it.id == down.id } ?: break
+   if (!change.pressed) {
+    if (axisLocked == Axis.Horizontal && seekAccum != 0f) {
+     val deltaSeconds = (seekAccum / size.width * 120f).toInt() // full swipe = 2 min
+     onEvent(PlayerGestureEvent.Seek(deltaSeconds, committing = true))
     }
+    break
+   }
+   val d = change.positionChange()
+   totalDx += d.x
+   totalDy += d.y
+   if (axisLocked == null && (abs(totalDx) > touchSlop || abs(totalDy) > touchSlop)) {
+    axisLocked = if (abs(totalDx) > abs(totalDy)) Axis.Horizontal else Axis.Vertical
+   }
+   when (axisLocked) {
+    Axis.Vertical -> {
+     // Vertical drag -> up = increase. Normalise by height.
+     val norm = -d.y / size.height.toFloat()
+     when (lane) {
+      Lane.Left -> onEvent(PlayerGestureEvent.Brightness(norm))
+      Lane.Right -> onEvent(PlayerGestureEvent.Volume(norm))
+      Lane.Middle -> {
+       // Middle vertical drag = pinch-free zoom
+       onEvent(PlayerGestureEvent.Zoom(1f + norm * 0.5f))
+      }
+     }
+     change.consume()
+    }
+    Axis.Horizontal -> {
+     seekAccum += d.x
+     val preview = (seekAccum / size.width * 120f).toInt()
+     onEvent(PlayerGestureEvent.Seek(preview, committing = false))
+     change.consume()
+    }
+    null -> Unit
+   }
+   if (axisLocked == null && !change.pressed) break
+  }
+ }
+}
 
 private enum class Axis { Horizontal, Vertical }
 private enum class Lane { Left, Middle, Right }
